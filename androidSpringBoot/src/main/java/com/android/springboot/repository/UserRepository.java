@@ -10,6 +10,6 @@ public interface UserRepository extends CrudRepository<User, String> {
 	
 	User save(User user);
 	
-	User findByUserId(User user);
+	User findByUserIdAndUserPassword(User user);
 
 }
