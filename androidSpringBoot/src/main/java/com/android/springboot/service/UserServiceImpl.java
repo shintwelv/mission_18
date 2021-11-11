@@ -18,7 +18,7 @@ public class UserServiceImpl implements UserService {
 	
 	@Override
 	public User select(User vo) {
-		User user = repo.findByUserId(vo);
+		User user = repo.findByUserId(vo.getUserId());
 		return user;
 	}
 

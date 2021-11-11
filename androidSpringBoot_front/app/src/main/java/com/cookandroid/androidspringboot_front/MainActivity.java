@@ -1,26 +1,28 @@
 package com.cookandroid.androidspringboot_front;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
-import com.squareup.moshi.Json;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.cookandroid.androidspringboot_front.retrofit.User;
+import com.cookandroid.androidspringboot_front.retrofit.UserApi;
 import com.squareup.moshi.Moshi;
 
-import java.io.IOException;
-
 import retrofit2.Call;
+import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.moshi.MoshiConverterFactory;
-import retrofit2.http.Body;
-import retrofit2.http.POST;
 
 public class MainActivity extends AppCompatActivity {
+
+    private final  String TAG = getClass().getSimpleName();
 
     Button btnSignIn, btnGoSignUp;
     EditText signInId, signInPw;
@@ -51,44 +53,47 @@ public class MainActivity extends AppCompatActivity {
                 String id = signInId.getText().toString();
                 String pw = signInPw.getText().toString();
 
-                User loginInfo = new User(id, pw);
+                User loginInfo = new User();
+                loginInfo.setUserId(id);
+                loginInfo.setUserPassword(pw);
 
                 Moshi moshi = new Moshi.Builder().build();
 
+//                String json = moshi.adapter(User.class).indent("  ").toJson(loginInfo);
+//                System.out.println(json);
+
                 Retrofit retrofit = new Retrofit.Builder()
-                        .baseUrl("http://localhost:9930/")
+                        .baseUrl("http://192.168.0.8:9930/")
                         .addConverterFactory(MoshiConverterFactory.create(moshi))
                         .build();
 
                 UserApi api = retrofit.create(UserApi.class);
 
-                try {
-                    Response<Void> resp = api.postUser(loginInfo).execute();
-                    if (resp.isSuccessful()){
-                        Intent intent = new Intent(getApplicationContext(), SignUpSuccess.class);
-                        startActivity(intent);
+                Call<Boolean> call = api.postUser(loginInfo);
+                call.enqueue(new Callback<Boolean>() {
+                    @Override
+                    public void onResponse(Call<Boolean> call, Response<Boolean> response) {
+                        if (response.isSuccessful()){
+                            boolean userExists = response.body();
+
+                            if (userExists) {
+                                Intent intent = new Intent(getApplicationContext(), SignUpSuccess.class);
+                                startActivity(intent);
+                            } else {
+                                Toast.makeText(getApplicationContext(), "아이디 혹은 비밀번호가 일치하지 않습니다", Toast.LENGTH_SHORT).show();
+                            }
+
+                        } else {
+                            Log.d(TAG,"Status Code : " + response.code());
+                        }
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
 
-
+                    @Override
+                    public void onFailure(Call<Boolean> call, Throwable t) {
+                        Log.d(TAG,"Fail msg : " + t.getMessage());
+                    }
+                });
             }
         });
-    }
-
-    static class User{
-        @Json(name = "userId") String userId;
-        @Json(name = "userPassword") String userPw;
-
-        User(String id, String pw){
-            this.userId = id;
-            this.userPw = pw;
-        }
-    }
-
-    interface UserApi {
-        @POST
-        Call<Void> postUser(@Body User user);
     }
 }
